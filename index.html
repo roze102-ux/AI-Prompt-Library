@@ -486,7 +486,13 @@
 <main class="main">
   <header class="topbar">
     <button class="hamburger-btn" onclick="document.getElementById('mobile-nav-overlay').classList.add('open')" aria-label="Open menu">&#9776;</button>
-    <h1 id="page-title">All Prompts</h1>
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+      <h1 id="page-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">All Prompts</h1>
+      <button id="edit-cat-btn" onclick="openEditCategory()" title="Rename category"
+        style="display:none;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+        ✏️ Edit
+      </button>
+    </div>
     <div class="topbar-right">
       <div class="stat" id="top-stats"></div>
     </div>
@@ -610,6 +616,30 @@
   </div>
 </div>
 
+<!-- ── Edit Category Modal ──────────────────────────────────── -->
+<div class="modal-overlay" id="edit-cat-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <h2>Edit Category</h2>
+      <button class="modal-close" onclick="closeModal('edit-cat-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Category Name</label>
+        <input class="form-input" id="edit-cat-name-input" placeholder="Category name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Emoji Icon</label>
+        <input class="form-input" id="edit-cat-emoji-input" placeholder="e.g. 💼" maxlength="4">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('edit-cat-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditCategory()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Toast ───────────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
@@ -709,7 +739,8 @@ function renderCategories() {
       div.innerHTML = "<div class=\"cat-left\"><span class=\"cat-emoji\">" + cat.emoji + "</span><span class=\"cat-name\">" + cat.name + "</span></div><span class=\"cat-count\">" + count + "</span>";
       div.onclick = function() {
         state.activeCategory = cat.id;
-        document.getElementById("page-title").textContent = cat.id === "all" ? "All Prompts" : cat.name;
+        document.getElementById("page-title").textContent = cat.id === "all" ? "All Prompts" : cat.emoji + " " + cat.name;
+        document.getElementById("edit-cat-btn").style.display = cat.id === "all" ? "none" : "inline-flex";
         document.getElementById("mobile-nav-overlay").classList.remove("open");
         renderCategories();
         renderPrompts();
@@ -1044,6 +1075,37 @@ document.querySelectorAll(".modal-overlay").forEach(overlay => {
   function randomEmoji() {
     return EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
   }
+// ── Edit Category ─────────────────────────────────────────────
+function openEditCategory() {
+  if (state.activeCategory === "all") return;
+  var cat = null;
+  for (var i = 0; i < state.categories.length; i++) {
+    if (state.categories[i].id === state.activeCategory) { cat = state.categories[i]; break; }
+  }
+  if (!cat) return;
+  document.getElementById("edit-cat-name-input").value  = cat.name;
+  document.getElementById("edit-cat-emoji-input").value = cat.emoji;
+  openModal("edit-cat-modal");
+}
+
+function saveEditCategory() {
+  var name  = document.getElementById("edit-cat-name-input").value.trim();
+  var emoji = document.getElementById("edit-cat-emoji-input").value.trim() || randomEmoji();
+  if (!name) { alert("Please enter a category name."); return; }
+  for (var i = 0; i < state.categories.length; i++) {
+    if (state.categories[i].id === state.activeCategory) {
+      state.categories[i].name  = name;
+      state.categories[i].emoji = emoji;
+      break;
+    }
+  }
+  document.getElementById("page-title").textContent = emoji + " " + name;
+  saveData();
+  closeModal("edit-cat-modal");
+  renderCategories();
+  showToast("✅ Category updated!");
+}
+
 function closeMobileNav(e) {
   if (!e || e.target === document.getElementById("mobile-nav-overlay")) {
     document.getElementById("mobile-nav-overlay").classList.remove("open");
