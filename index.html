@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Prompt Library</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f0f2f7;
+      --surface:  #ffffff;
+      --border:   #e2e8f0;
+      --accent:   #4f6ef7;
+      --accent-h: #3b5bdb;
+      --accent-lt:#eef0ff;
+      --success:  #22c55e;
+      --error:    #ef4444;
+      --warning:  #f59e0b;
+      --text:     #1e293b;
+      --muted:    #64748b;
+      --navy:     #1a1a2e;
+      --radius:   12px;
+      --shadow:   0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ──────────────────────────────────────────── */
+    .sidebar {
+      width: 240px; min-width: 240px;
+      background: var(--navy);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #4f6ef7, #7c3aed);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .logo-title { color: #fff; font-size: 15px; font-weight: 700; }
+    .logo-sub   { color: rgba(255,255,255,.5); font-size: 11px; }
+
+    /* ── Sidebar Action Buttons ───────────────────────────── */
+    .sidebar-actions {
+      padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .sidebar-btn {
+      width: 100%; padding: 9px 14px;
+      border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; transition: all .15s;
+      text-align: center;
+    }
+    .sidebar-btn-primary {
+      background: var(--accent); color: #fff;
+    }
+    .sidebar-btn-primary:hover { background: var(--accent-h); }
+    .sidebar-btn-secondary {
+      background: rgba(255,255,255,.06);
+      border: 1px dashed rgba(255,255,255,.2);
+      color: rgba(255,255,255,.7);
+    }
+    .sidebar-btn-secondary:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .sidebar-btn-danger {
+      background: rgba(239,68,68,.15);
+      border: 1px solid rgba(239,68,68,.3);
+      color: rgba(255,150,150,.9);
+    }
+    .sidebar-btn-danger:hover { background: rgba(239,68,68,.3); color: #fff; }
+
+    /* ── Hebrew / RTL Support ─────────────────────────────── */
+    .rtl { direction: rtl; text-align: right; }
+    .prompt-preview.rtl { font-family: 'Segoe UI', 'Arial', sans-serif; }
+    .preview-text.rtl   { direction: rtl; text-align: right; font-family: 'Segoe UI', 'Arial', sans-serif; }
+    .form-textarea.rtl  { direction: rtl; text-align: right; }
+
+    .search-box {
+      width: 100%;
+      padding: 9px 14px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    .search-box::placeholder { color: rgba(255,255,255,.4); }
+    .search-box:focus { border-color: var(--accent); background: rgba(255,255,255,.12); }
+
+    .sidebar-section {
+      padding: 12px 12px 4px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: rgba(255,255,255,.35);
+    }
+
+    .cat-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+
+    .cat-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .15s;
+      margin-bottom: 2px;
+    }
+    .cat-item:hover { background: rgba(255,255,255,.08); }
+    .cat-item.active { background: var(--accent); }
+
+    .cat-left { display: flex; align-items: center; gap: 9px; }
+    .cat-emoji { font-size: 16px; }
+    .cat-name  { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.85); }
+    .cat-item.active .cat-name { color: #fff; }
+    .cat-count {
+      font-size: 11px; font-weight: 600;
+      background: rgba(255,255,255,.15);
+      color: rgba(255,255,255,.7);
+      padding: 2px 7px; border-radius: 10px;
+      min-width: 22px; text-align: center;
+    }
+    .cat-item.active .cat-count { background: rgba(255,255,255,.25); color: #fff; }
+
+    .add-cat-btn {
+      margin: 8px; padding: 9px 12px;
+      background: rgba(255,255,255,.06);
+      border: 1px dashed rgba(255,255,255,.2);
+      border-radius: 8px;
+      color: rgba(255,255,255,.5);
+      font-size: 13px; cursor: pointer;
+      text-align: center; transition: all .15s;
+    }
+    .add-cat-btn:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); }
+
+    /* ── Main ─────────────────────────────────────────────── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    .topbar {
+      height: 60px; min-height: 60px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+    }
+    .topbar h1 { font-size: 18px; font-weight: 700; }
+    .topbar-right { display: flex; gap: 10px; align-items: center; }
+
+    @media (max-width: 900px) {
+      .topbar {
+        background: var(--navy);
+        border-bottom: none;
+      }
+      .topbar h1 { color: #fff; }
+      .topbar-right { color: rgba(255,255,255,.7); }
+    }
+
+    .content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+
+    /* ── Prompt Grid ──────────────────────────────────────── */
+    .prompt-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .prompt-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: flex; flex-direction: column;
+      transition: box-shadow .15s, border-color .15s;
+      overflow: hidden;
+    }
+    .prompt-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.12); border-color: var(--accent); }
+
+    .prompt-card-header {
+      padding: 16px 16px 10px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    }
+    .prompt-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+    .prompt-category-tag {
+      font-size: 11px; font-weight: 600;
+      background: var(--accent-lt); color: var(--accent);
+      padding: 2px 8px; border-radius: 10px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+
+    .prompt-preview {
+      padding: 0 16px 12px;
+      font-size: 12px; line-height: 1.6;
+      color: var(--muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .prompt-actions {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 8px;
+      background: #fafbfc;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: none; transition: all .15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-h); }
+    .btn-outline { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-outline:hover { background: var(--bg); color: var(--text); }
+    .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--border); }
+    .btn-danger:hover { background: #fff5f5; border-color: var(--error); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* ── Empty State ──────────────────────────────────────── */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .empty-state p  { font-size: 13px; margin-bottom: 20px; }
+
+    /* ── Modal ────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      width: 560px; max-width: 95vw;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h2 { font-size: 16px; font-weight: 700; }
+    .modal-close {
+      width: 30px; height: 30px;
+      border: none; background: var(--bg);
+      border-radius: 8px; cursor: pointer;
+      font-size: 16px; display: flex; align-items: center; justify-content: center;
+    }
+    .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .form-input, .form-select, .form-textarea {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px; font-size: 13px; color: var(--text);
+      outline: none; transition: border .15s;
+      font-family: inherit;
+      background: var(--surface);
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+    .form-textarea { resize: vertical; min-height: 160px; line-height: 1.6; }
+    .form-textarea:lang(he) { direction: rtl; }
+
+    /* ── Preview Modal ────────────────────────────────────── */
+    .preview-text {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 13px; line-height: 1.8;
+      white-space: pre-wrap;
+      max-height: 400px; overflow-y: auto;
+      color: var(--text);
+    }
+
+    /* ── Toast ────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--navy); color: #fff;
+      padding: 12px 20px; border-radius: 10px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      transform: translateY(80px); opacity: 0;
+      transition: all .3s; z-index: 200;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Stats bar ────────────────────────────────────────── */
+    .stats-bar {
+      display: flex; gap: 24px; align-items: center;
+      padding: 0 0 20px;
+    }
+    .stat { font-size: 13px; color: var(--muted); }
+    .stat strong { color: var(--accent); }
+
+    /* ── Scrollbars ───────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .site-footer {
+      text-align: center;
+      padding: 12px 20px;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .site-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .site-footer a:hover { text-decoration: underline; }
+
+    /* ── Hamburger / Mobile Nav ───────────────────────────── */
+    .hamburger-btn {
+      display: flex;
+      align-items: center;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 26px;
+      cursor: pointer;
+      padding: 4px 12px 4px 0;
+      border-radius: 6px;
+      line-height: 1;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .hamburger-btn:hover { background: rgba(255,255,255,.15); }
+
+    .mobile-nav-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 500;
+    }
+    .mobile-nav-overlay.open { display: block; }
+
+    .mobile-nav-panel {
+      position: absolute;
+      top: 0; left: 0;
+      width: 260px; height: 100%;
+      background: var(--navy);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      animation: slideInLeft .22s ease;
+    }
+
+    @keyframes slideInLeft {
+      from { transform: translateX(-100%); }
+      to   { transform: translateX(0); }
+    }
+
+    .mobile-nav-close-row {
+      display: flex;
+      justify-content: flex-end;
+      padding: 12px 12px 4px;
+    }
+
+    .mobile-nav-close {
+      background: rgba(255,255,255,.12);
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .mobile-nav-close:hover { background: rgba(255,255,255,.25); }
+
+    /* Desktop: hide hamburger, show sidebar */
+    @media (min-width: 901px) {
+      .hamburger-btn { display: none; }
+    }
+
+    /* Mobile: hide sidebar, show hamburger, stack layout */
+    @media (max-width: 900px) {
+      body { flex-direction: column; height: auto; overflow: auto; }
+      .sidebar { display: none; }
+      .topbar { padding: 0 16px; }
+      .content { padding: 16px; }
+      .prompt-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ─────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon">📚</div>
+      <div>
+        <div class="logo-title">AI Prompt Library</div>
+        <div class="logo-sub">AI Prompt Manager</div>
+      </div>
+    </div>
+    <input class="search-box" id="search-input" placeholder="🔍 Search prompts..." oninput="renderPrompts()">
+  </div>
+
+  <div class="sidebar-actions">
+    <button class="sidebar-btn sidebar-btn-primary" onclick="openAddPrompt()">+ Add Prompt</button>
+    <button class="sidebar-btn sidebar-btn-primary" onclick="openAddCategory()">+ New Category</button>
+    <button class="sidebar-btn sidebar-btn-primary" onclick="openRemovePrompt()">− Remove Prompt</button>
+    <button class="sidebar-btn sidebar-btn-primary" onclick="openRemoveCategory()">− Remove Category</button>
+    <div style="height:1px;background:rgba(255,255,255,.1);margin:4px 0"></div>
+    <button class="sidebar-btn sidebar-btn-primary" onclick="exportLibrary()">📤 Export Library</button>
+    <label class="sidebar-btn sidebar-btn-primary" style="cursor:pointer;text-align:center">
+      📥 Import Library
+      <input type="file" accept=".json" id="import-input" style="display:none" onchange="importLibrary(event)">
+    </label>
+  </div>
+
+  <div class="sidebar-section">Categories</div>
+  <div class="cat-list" id="cat-list"></div>
+</aside>
+
+<!-- ── Mobile Nav Overlay ───────────────────────────────────── -->
+<div class="mobile-nav-overlay" id="mobile-nav-overlay">
+  <div class="mobile-nav-panel">
+    <div class="mobile-nav-close-row">
+      <button class="mobile-nav-close" onclick="document.getElementById('mobile-nav-overlay').classList.remove('open')" aria-label="Close menu">&#10005;</button>
+    </div>
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">&#128218;</div>
+        <div>
+          <div class="logo-title">AI Prompt Library</div>
+          <div class="logo-sub">AI Prompt Manager</div>
+        </div>
+      </div>
+      <input class="search-box" id="search-input-mobile" placeholder="Search prompts..." oninput="document.getElementById('search-input').value=this.value;renderPrompts()">
+    </div>
+    <div class="sidebar-actions">
+      <button class="sidebar-btn sidebar-btn-primary" onclick="closeMobileNavAndRun(openAddPrompt)">+ Add Prompt</button>
+      <button class="sidebar-btn sidebar-btn-primary" onclick="closeMobileNavAndRun(openAddCategory)">+ New Category</button>
+      <button class="sidebar-btn sidebar-btn-primary" onclick="closeMobileNavAndRun(openRemovePrompt)">- Remove Prompt</button>
+      <button class="sidebar-btn sidebar-btn-primary" onclick="closeMobileNavAndRun(openRemoveCategory)">- Remove Category</button>
+      <div style="height:1px;background:rgba(255,255,255,.1);margin:4px 0"></div>
+      <button class="sidebar-btn sidebar-btn-primary" onclick="exportLibrary()">Export Library</button>
+      <label class="sidebar-btn sidebar-btn-primary" style="cursor:pointer;text-align:center">
+        Import Library
+        <input type="file" accept=".json" id="import-input-mobile" style="display:none" onchange="importLibrary(event)">
+      </label>
+    </div>
+    <div class="sidebar-section">Categories</div>
+    <div class="cat-list" id="cat-list-mobile"></div>
+  </div>
+</div>
+
+<!-- ── Main ────────────────────────────────────────────────── -->
+<main class="main">
+  <header class="topbar">
+    <button class="hamburger-btn" onclick="document.getElementById('mobile-nav-overlay').classList.add('open')" aria-label="Open menu">&#9776;</button>
+    <h1 id="page-title">All Prompts</h1>
+    <div class="topbar-right">
+      <div class="stat" id="top-stats"></div>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="prompt-grid" id="prompt-grid"></div>
+  </div>
+  <footer class="site-footer">
+    Powered by <a href="https://669609ea814d1.site123.me" target="_blank" rel="noopener">EZ Navigation</a> &copy; 2023 All rights reserved
+  </footer>
+</main>
+
+<!-- ── Add/Edit Prompt Modal ───────────────────────────────── -->
+<div class="modal-overlay" id="prompt-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="prompt-modal-title">Add Prompt</h2>
+      <button class="modal-close" onclick="closeModal('prompt-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Prompt Title</label>
+        <input class="form-input" id="pm-title" placeholder="e.g. Angry Customer Response">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="pm-category"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prompt Text</label>
+        <textarea class="form-textarea" id="pm-text" placeholder="Enter your full prompt here..." oninput="this.className='form-textarea'+(isHebrew(this.value)?' rtl':'')"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('prompt-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePrompt()">Save Prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Preview Modal ───────────────────────────────────────── -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="preview-title">Preview</h2>
+      <button class="modal-close" onclick="closeModal('preview-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="preview-text" id="preview-text"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('preview-modal')">Close</button>
+      <button class="btn btn-primary" onclick="copyFromPreview()">📋 Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Category Modal ──────────────────────────────────── -->
+<div class="modal-overlay" id="cat-modal">
+  <div class="modal" style="width:360px">
+    <div class="modal-header">
+      <h2>New Category</h2>
+      <button class="modal-close" onclick="closeModal('cat-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Category Name</label>
+        <input class="form-input" id="cat-name-input" placeholder="e.g. Sales Scripts">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Emoji Icon</label>
+        <input class="form-input" id="cat-emoji-input" placeholder="e.g. 💼" maxlength="4">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('cat-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCategory()">Create Category</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Remove Prompt Modal ──────────────────────────────────── -->
+<div class="modal-overlay" id="remove-prompt-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <h2>Remove Prompt</h2>
+      <button class="modal-close" onclick="closeModal('remove-prompt-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Select Prompt to Remove</label>
+        <select class="form-select" id="remove-prompt-select"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('remove-prompt-modal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmRemovePrompt()">🗑 Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Remove Category Modal ───────────────────────────────── -->
+<div class="modal-overlay" id="remove-cat-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <h2>Remove Category</h2>
+      <button class="modal-close" onclick="closeModal('remove-cat-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Select Category to Remove</label>
+        <select class="form-select" id="remove-cat-select"></select>
+      </div>
+      <p style="font-size:12px;color:var(--error)">⚠️ All prompts in this category will also be deleted.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('remove-cat-modal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmRemoveCategory()">🗑 Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ───────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Default Data ──────────────────────────────────────────────
+const DEFAULT_CATEGORIES = [
+  { id: "all",     name: "All Prompts",        emoji: "📚" },
+  { id: "cs",      name: "Customer Service",   emoji: "🤝" },
+  { id: "chatbot", name: "Chatbot Personas",   emoji: "🤖" },
+  { id: "tasks",   name: "Simple Tasks",       emoji: "🧮" },
+  { id: "docs",    name: "Document Processing",emoji: "📄" },
+  { id: "email",   name: "Email Writing",      emoji: "\u2709\ufe0f"  },
+  { id: "cat_1782358037841", name: "Hp", emoji: "\ud83d\udcc1" },
+];
+
+const DEFAULT_PROMPTS = [
+  {
+    id: "p1", categoryId: "cs", title: "Angry Customer — T-Shirt IL",
+    text: "You are a customer service specialist for T-Shirt IL, an Israeli online t-shirt store.\n\nYou are encouraging, warm and friendly. Your role is to reply with thoughtful, practical solutions to customer queries about orders, delivery and products.\n\nBusiness Information:\n- Standard delivery: 3-5 business days\n- Express delivery: same/next day available for ₪30 extra\n- This is a WhatsApp conversation — keep tone casual, warm and responses brief\n\nRules you must always follow:\n- Never argue with a customer under any circumstance\n- Never offer or approve refunds — escalate to manager instead\n- Always acknowledge the customer's feelings first before offering a solution\n- Ask for order number if not provided\n- Acknowledge urgency and try to find a viable solution\n- Be honest about delivery time if it might not arrive as requested\n- Suggest delivery alternatives if delivery is at risk\n- Keep responses under 3 sentences — short and clear\n- If customer is extremely angry say: \"I'm escalating this to our manager who will contact you within 2 hours\"\n\nCustomer message:\n{customer_message}"
+  },
+  {
+    id: "p2", categoryId: "cs", title: "Order Status Reply — WhatsApp",
+    text: "You are a friendly customer service agent. A customer is asking about their order status.\n\nRules:\n- Be warm and concise\n- Always ask for order number if not provided\n- If order is delayed, apologize and offer an update within 24 hours\n- Never make promises you cannot keep\n- Keep reply under 3 sentences\n\nCustomer message: {customer_message}"
+  },
+  {
+    id: "p3", categoryId: "chatbot", title: "Roze-Bot — Personal Coach",
+    text: "You are Roze-Bot, a friendly and warm personal coach. You were built by a developer named Roze. You are encouraging, supportive, and genuinely care about helping people reach their goals. You ask thoughtful questions to understand what someone needs, celebrate their wins no matter how small, and gently motivate them when they're struggling. You speak warmly like a trusted friend who happens to be a great coach."
+  },
+  {
+    id: "p4", categoryId: "chatbot", title: "Professional Business Assistant",
+    text: "You are a professional business assistant specializing in Israeli SMB operations.\n\nYou are concise, practical and direct. You never waste the user's time with unnecessary explanations.\n\nYour areas of expertise:\n- Business accounting and invoicing (Israeli market)\n- ERP systems (Priority, SAP Business One)\n- Procurement and vendor management\n- Hebrew and English fluently\n\nRules:\n- Answer in the language the user writes in\n- Keep responses under 5 sentences unless asked for detail\n- Always offer a practical next step"
+  },
+  {
+    id: "p5", categoryId: "docs", title: "Invoice Data Extraction",
+    text: "You are an invoice data extraction specialist.\nExtract these fields from the invoice text and return ONLY valid JSON:\n- invoice_number\n- vendor\n- date (YYYY-MM-DD format)\n- total_amount (include currency symbol)\n\nIf a field is not found, use null.\n\nInvoice text:\n{invoice_text}\n\nReturn ONLY this JSON with no additional text:\n{\n  \"invoice_number\": \"...\",\n  \"vendor\": \"...\",\n  \"date\": \"...\",\n  \"total_amount\": \"...\"\n}"
+  },
+  {
+    id: "p6", categoryId: "docs", title: "PDF Summary — Hebrew/English",
+    text: "You are a document summarization specialist. \n\nSummarize the following document in clear, concise bullet points.\n\nRules:\n- Maximum 8 bullet points\n- Each point maximum 1 sentence\n- Focus on the most important facts and figures\n- If the document is in Hebrew, summarize in Hebrew\n- If in English, summarize in English\n\nDocument text:\n{document_text}"
+  },
+  {
+    id: "p7", categoryId: "email", title: "Procurement Email to Supplier",
+    text: "You are a professional procurement officer. Write a formal email to a supplier requesting the following order.\n\nDetails to include:\n- Company name: {company_name}\n- Items ordered: {items}\n- Required delivery date: {delivery_date}\n- Special instructions: {instructions}\n\nRules:\n- Professional and polite tone\n- Clear subject line\n- Request order confirmation and delivery timeline\n- Sign off with full contact details placeholder\n- Write in {language}"
+  },
+  {
+    id: "p8", categoryId: "email", title: "Follow-Up Email — No Response",
+    text: "Write a polite follow-up email to a contact who has not responded to a previous message.\n\nContext: {original_context}\nDays since last contact: {days}\n\nRules:\n- Polite and non-pressuring tone\n- Reference the previous message briefly\n- Add clear call to action\n- Keep under 5 sentences\n- Subject line should start with \"Follow up:\""
+  },
+  {
+    id: "p9", categoryId: "tasks", title: "Build a Calculator — HTML",
+    text: "Build a clean, functional calculator as a single HTML file.\n\nRequirements:\n- Standard operations: +, -, ×, ÷\n- Clear and backspace buttons\n- Decimal point support\n- Keyboard support (number keys + operators)\n- Clean modern design with a dark display\n- No external libraries — pure HTML, CSS, JavaScript\n- Mobile friendly"
+  },
+  {
+    id: "p10", categoryId: "tasks", title: "Data Table from CSV",
+    text: "Convert the following CSV data into a clean, styled HTML table.\n\nCSV data:\n{csv_data}\n\nRequirements:\n- Sortable columns (click header to sort)\n- Alternating row colors\n- Search/filter input above the table\n- Show total row count\n- Clean, professional styling\n- Single HTML file, no external dependencies"
+  },
+  {
+    id: "p1782358107404", categoryId: "cat_1782358037841", title: "Hp printer",
+    text: "\u05d0\u05ea\u05d4 \u05d8\u05db\u05e0\u05d0\u05d9 \u05de\u05d7\u05e9\u05d1\u05d9\u05dd \u05d1\u05d7\u05e1\u05d3. \u05d0\u05ea\u05d4 \u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0\u05e0\u05e9\u05d9\u05dd \u05d1\u05d1\u05e2\u05d9\u05d5\u05ea \u05d8\u05db\u05e0\u05d9\u05d5\u05ea \u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1 \u05d4\u05de\u05d3\u05e4\u05e1\u05ea \u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3\u05ea \u05e0\u05d0 \u05dc\u05e1\u05d3\u05e8 \u05d0\u05ea \u05d4\u05de\u05d3\u05e4\u05e1\u05ea."
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────
+let state = {
+  categories: [],
+  prompts: [],
+  activeCategory: "all",
+  editingPromptId: null,
+  previewPromptId: null,
+};
+
+// ── Storage ───────────────────────────────────────────────────
+function loadData() {
+  const cats    = localStorage.getItem("pl_categories");
+  const prompts = localStorage.getItem("pl_prompts");
+  state.categories = cats    ? JSON.parse(cats)    : [...DEFAULT_CATEGORIES];
+  state.prompts    = prompts ? JSON.parse(prompts) : [...DEFAULT_PROMPTS];
+}
+
+function saveData() {
+  localStorage.setItem("pl_categories", JSON.stringify(state.categories));
+  localStorage.setItem("pl_prompts",    JSON.stringify(state.prompts));
+}
+
+// ── Render ────────────────────────────────────────────────────
+function renderCategories() {
+  var lists = [document.getElementById("cat-list"), document.getElementById("cat-list-mobile")];
+  lists.forEach(function(list) {
+    if (!list) return;
+    list.innerHTML = "";
+    state.categories.forEach(function(cat) {
+      var count = cat.id === "all"
+        ? state.prompts.length
+        : state.prompts.filter(function(p) { return p.categoryId === cat.id; }).length;
+      var div = document.createElement("div");
+      div.className = "cat-item" + (state.activeCategory === cat.id ? " active" : "");
+      div.innerHTML = "<div class=\"cat-left\"><span class=\"cat-emoji\">" + cat.emoji + "</span><span class=\"cat-name\">" + cat.name + "</span></div><span class=\"cat-count\">" + count + "</span>";
+      div.onclick = function() {
+        state.activeCategory = cat.id;
+        document.getElementById("page-title").textContent = cat.id === "all" ? "All Prompts" : cat.name;
+        document.getElementById("mobile-nav-overlay").classList.remove("open");
+        renderCategories();
+        renderPrompts();
+      };
+      list.appendChild(div);
+    });
+  });
+}
+
+function renderPrompts() {
+  var grid   = document.getElementById("prompt-grid");
+  var search = document.getElementById("search-input").value.toLowerCase().trim();
+
+  var prompts = state.activeCategory === "all"
+    ? state.prompts.slice()
+    : state.prompts.filter(function(p) { return p.categoryId === state.activeCategory; });
+
+  if (search) {
+    prompts = prompts.filter(function(p) {
+      return p.title.toLowerCase().indexOf(search) !== -1 ||
+             p.text.toLowerCase().indexOf(search) !== -1;
+    });
+  }
+
+  var count = prompts.length;
+  document.getElementById("top-stats").textContent = count + " prompt" + (count !== 1 ? "s" : "");
+
+  if (!prompts.length) {
+    grid.innerHTML = "<div class=\"empty-state\" style=\"grid-column:1/-1\">" +
+      "<div class=\"empty-icon\">" + (search ? "\ud83d\udd0d" : "\ud83d\udcdd") + "</div>" +
+      "<h3>" + (search ? "No prompts match your search" : "No prompts here yet") + "</h3>" +
+      "<p>" + (search ? "Try different keywords" : "Click '+ Add Prompt' to create your first one") + "</p>" +
+      (!search ? "<button class=\"btn btn-primary\" onclick=\"openAddPrompt()\">+ Add Prompt</button>" : "") +
+      "</div>";
+    return;
+  }
+
+  grid.innerHTML = "";
+  prompts.forEach(function(p) {
+    var cat = null;
+    for (var i = 0; i < state.categories.length; i++) {
+      if (state.categories[i].id === p.categoryId) { cat = state.categories[i]; break; }
+    }
+    var card = document.createElement("div");
+    card.className = "prompt-card";
+    var catTag = cat ? cat.emoji + " " + cat.name : "";
+    var previewClass = "prompt-preview" + (isHebrew(p.text) ? " rtl" : "");
+    card.innerHTML =
+      "<div class=\"prompt-card-header\">" +
+        "<div class=\"prompt-title\">" + escHtml(p.title) + "</div>" +
+        "<span class=\"prompt-category-tag\">" + catTag + "</span>" +
+      "</div>" +
+      "<div class=\"" + previewClass + "\">" + escHtml(p.text) + "</div>" +
+      "<div class=\"prompt-actions\">" +
+        "<button class=\"btn btn-primary btn-sm\" onclick=\"copyPrompt('" + p.id + "')\">&#128203; Copy</button>" +
+        "<button class=\"btn btn-outline btn-sm\" onclick=\"previewPrompt('" + p.id + "')\">&#128065; Preview</button>" +
+        "<button class=\"btn btn-outline btn-sm\" onclick=\"editPrompt('" + p.id + "')\">&#9999;&#65039; Edit</button>" +
+        "<button class=\"btn btn-danger btn-sm\" onclick=\"deletePrompt('" + p.id + "')\">&#128465;</button>" +
+      "</div>";
+    grid.appendChild(card);
+  });
+}
+
+function escHtml(str) {
+  if (!str) return "";
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ── Hebrew Detection ──────────────────────────────────────────
+function isHebrew(text) {
+  return /[\u0590-\u05FF]/.test(text);
+}
+
+// ── Actions ───────────────────────────────────────────────────
+function copyPrompt(id) {
+  const p = state.prompts.find(x => x.id === id);
+  if (!p) return;
+  navigator.clipboard.writeText(p.text).then(() => showToast("✅ Copied to clipboard!"));
+}
+
+function copyFromPreview() {
+  if (!state.previewPromptId) return;
+  copyPrompt(state.previewPromptId);
+  closeModal("preview-modal");
+}
+
+function previewPrompt(id) {
+  const p = state.prompts.find(x => x.id === id);
+  if (!p) return;
+  state.previewPromptId = id;
+  document.getElementById("preview-title").textContent = p.title;
+  const previewEl = document.getElementById("preview-text");
+  previewEl.textContent = p.text;
+  previewEl.className = "preview-text" + (isHebrew(p.text) ? " rtl" : "");
+  openModal("preview-modal");
+}
+
+function editPrompt(id) {
+  const p = state.prompts.find(x => x.id === id);
+  if (!p) return;
+  state.editingPromptId = id;
+  document.getElementById("prompt-modal-title").textContent = "Edit Prompt";
+  document.getElementById("pm-title").value    = p.title;
+  document.getElementById("pm-text").value     = p.text;
+  populateCategorySelect(p.categoryId);
+  openModal("prompt-modal");
+}
+
+function deletePrompt(id) {
+  if (!confirm("Delete this prompt? This cannot be undone.")) return;
+  state.prompts = state.prompts.filter(p => p.id !== id);
+  saveData();
+  renderCategories();
+  renderPrompts();
+  showToast("🗑 Prompt deleted");
+}
+
+function openAddPrompt() {
+  state.editingPromptId = null;
+  document.getElementById("prompt-modal-title").textContent = "Add Prompt";
+  document.getElementById("pm-title").value = "";
+  document.getElementById("pm-text").value  = "";
+  populateCategorySelect(state.activeCategory === "all" ? state.categories[1]?.id : state.activeCategory);
+  openModal("prompt-modal");
+}
+
+function savePrompt() {
+  const title    = document.getElementById("pm-title").value.trim();
+  const text     = document.getElementById("pm-text").value.trim();
+  const catId    = document.getElementById("pm-category").value;
+
+  if (!title) { alert("Please enter a prompt title."); return; }
+  if (!text)  { alert("Please enter the prompt text."); return; }
+
+  if (state.editingPromptId) {
+    const p = state.prompts.find(x => x.id === state.editingPromptId);
+    if (p) { p.title = title; p.text = text; p.categoryId = catId; }
+  } else {
+    state.prompts.push({
+      id: "p" + Date.now(),
+      categoryId: catId, title, text
+    });
+  }
+
+  saveData();
+  closeModal("prompt-modal");
+  renderCategories();
+  renderPrompts();
+  showToast(state.editingPromptId ? "✅ Prompt updated!" : "✅ Prompt added!");
+}
+
+function openAddCategory() {
+  document.getElementById("cat-name-input").value  = "";
+  document.getElementById("cat-emoji-input").value = randomEmoji();
+  openModal("cat-modal");
+}
+
+function saveCategory() {
+  const name  = document.getElementById("cat-name-input").value.trim();
+  const emoji = document.getElementById("cat-emoji-input").value.trim() || randomEmoji();
+  if (!name) { alert("Please enter a category name."); return; }
+
+  const id = "cat_" + Date.now();
+  state.categories.push({ id, name, emoji });
+  saveData();
+  closeModal("cat-modal");
+  renderCategories();
+  showToast("✅ Category created!");
+}
+
+function openRemovePrompt() {
+  const sel = document.getElementById("remove-prompt-select");
+  sel.innerHTML = "";
+  if (!state.prompts.length) { alert("No prompts to remove."); return; }
+  state.prompts.forEach(p => {
+    const cat = state.categories.find(c => c.id === p.categoryId);
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = (cat ? cat.emoji + " " : "") + p.title;
+    sel.appendChild(opt);
+  });
+  openModal("remove-prompt-modal");
+}
+
+function confirmRemovePrompt() {
+  const id = document.getElementById("remove-prompt-select").value;
+  if (!id) return;
+  if (!confirm("Remove this prompt? This cannot be undone.")) return;
+  state.prompts = state.prompts.filter(p => p.id !== id);
+  saveData();
+  closeModal("remove-prompt-modal");
+  renderCategories();
+  renderPrompts();
+  showToast("🗑 Prompt removed");
+}
+
+function openRemoveCategory() {
+  const sel = document.getElementById("remove-cat-select");
+  sel.innerHTML = "";
+  const removable = state.categories.filter(c => c.id !== "all");
+  if (!removable.length) { alert("No categories to remove."); return; }
+  removable.forEach(c => {
+    const count = state.prompts.filter(p => p.categoryId === c.id).length;
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.emoji + " " + c.name + " (" + count + " prompts)";
+    sel.appendChild(opt);
+  });
+  openModal("remove-cat-modal");
+}
+
+function confirmRemoveCategory() {
+  const id = document.getElementById("remove-cat-select").value;
+  if (!id) return;
+  const cat = state.categories.find(c => c.id === id);
+  const count = state.prompts.filter(p => p.categoryId === id).length;
+  if (!confirm("Remove \"${cat.name}\" and all ${count} prompt(s) in it? This cannot be undone.")) return;
+  state.categories = state.categories.filter(c => c.id !== id);
+  state.prompts    = state.prompts.filter(p => p.categoryId !== id);
+  if (state.activeCategory === id) state.activeCategory = "all";
+  saveData();
+  closeModal("remove-cat-modal");
+  renderCategories();
+  renderPrompts();
+  showToast("🗑 Category removed");
+}
+
+// ── Export / Import ───────────────────────────────────────────
+function exportLibrary() {
+  const data = {
+    version: "1.0",
+    exported_at: new Date().toISOString(),
+    categories: state.categories,
+    prompts: state.prompts
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "PromptLibrary_${new Date().toISOString().slice(0,10)}.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("📤 Library exported successfully!");
+}
+
+function importLibrary(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.categories || !data.prompts) {
+        alert("Invalid file format. Please use a file exported from this app.");
+        return;
+      }
+      if (!confirm("Import ${data.prompts.length} prompts and ${data.categories.length} categories?\\n\\nThis will REPLACE your current library.")) return;
+      state.categories = data.categories;
+      state.prompts    = data.prompts;
+      state.activeCategory = "all";
+      saveData();
+      renderCategories();
+      renderPrompts();
+      showToast("📥 Library imported successfully!");
+    } catch(err) {
+      alert("Could not read file. Make sure it's a valid JSON export.");
+    }
+  };
+  reader.readAsText(file);
+  // Reset input so same file can be imported again
+  event.target.value = "";
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function populateCategorySelect(selectedId) {
+  const sel = document.getElementById("pm-category");
+  sel.innerHTML = "";
+  state.categories
+    .filter(c => c.id !== "all")
+    .forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.emoji + " " + c.name;
+      if (c.id === selectedId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+  // Add "New Category" option at the bottom
+  const divider = document.createElement("option");
+  divider.disabled = true;
+  divider.textContent = "──────────────";
+  sel.appendChild(divider);
+
+  const newCat = document.createElement("option");
+  newCat.value = "__new__";
+  newCat.textContent = "＋ New Category...";
+  sel.appendChild(newCat);
+
+  // Handle selection of "New Category"
+  sel.onchange = function() {
+    if (this.value === "__new__") {
+      this.value = selectedId || state.categories[1]?.id;
+      closeModal("prompt-modal");
+      openAddCategory();
+    }
+  };
+}
+
+function openModal(id)  { document.getElementById(id).classList.add("open"); }
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// Close modal on overlay click
+document.querySelectorAll(".modal-overlay").forEach(overlay => {
+  overlay.addEventListener("click", e => {
+    if (e.target === overlay) overlay.classList.remove("open");
+  });
+});
+
+  var EMOJI_POOL = [
+    "🎯","🚀","💡","🔥","⚡","🌟","🎨","🛠️","📌","🧩",
+    "💎","🎭","🌈","🔮","🧠","📡","🎪","🏆","🌊","🎲",
+    "🦁","🦊","🐬","🦋","🌺","🍀","🎵","🎸","🏄","🧲"
+  ];
+
+  function randomEmoji() {
+    return EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
+  }
+function closeMobileNav(e) {
+  if (!e || e.target === document.getElementById("mobile-nav-overlay")) {
+    document.getElementById("mobile-nav-overlay").classList.remove("open");
+  }
+}
+function closeMobileNavAndRun(fn) {
+  document.getElementById("mobile-nav-overlay").classList.remove("open");
+  setTimeout(fn, 50);
+}
+
+// Close overlay click on backdrop
+document.getElementById("mobile-nav-overlay").addEventListener("click", function(e) {
+  if (e.target === this) this.classList.remove("open");
+});
+
+// ── Init ──────────────────────────────────────────────────────
+loadData();
+renderCategories();
+renderPrompts();
+</script>
+</body>
+</html>
