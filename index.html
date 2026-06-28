@@ -422,12 +422,15 @@
 <!-- ── Sidebar ─────────────────────────────────────────────── -->
 <aside class="sidebar">
   <div class="sidebar-header">
-    <div class="logo">
-      <div class="logo-icon">📚</div>
-      <div>
-        <div class="logo-title">AI Prompt Library</div>
-        <div class="logo-sub">AI Prompt Manager</div>
+    <div class="logo" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="logo-icon">📚</div>
+        <div>
+          <div class="logo-title">AI Prompt Library</div>
+          <div class="logo-sub">AI Prompt Manager</div>
+        </div>
       </div>
+      <button onclick="goHome()" title="Back to main screen" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">🏠</button>
     </div>
     <div style="position:relative;">
       <input class="search-box" id="search-input" placeholder="🔍 Search prompts..." oninput="onSearch(this.value)" onkeydown="if(event.key==='Escape')clearSearch()">
@@ -459,12 +462,15 @@
       <button class="mobile-nav-close" onclick="document.getElementById('mobile-nav-overlay').classList.remove('open')" aria-label="Close menu">&#10005;</button>
     </div>
     <div class="sidebar-header">
-      <div class="logo">
-        <div class="logo-icon">&#128218;</div>
-        <div>
-          <div class="logo-title">AI Prompt Library</div>
-          <div class="logo-sub">AI Prompt Manager</div>
+      <div class="logo" style="justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="logo-icon">&#128218;</div>
+          <div>
+            <div class="logo-title">AI Prompt Library</div>
+            <div class="logo-sub">AI Prompt Manager</div>
+          </div>
         </div>
+        <button onclick="closeMobileNavAndRun(goHome)" title="Back to main screen" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🏠</button>
       </div>
       <input class="search-box" id="search-input-mobile" placeholder="Search prompts..." oninput="onSearch(this.value)" onkeydown="if(event.key==='Escape')clearSearch()">
     </div>
@@ -505,7 +511,7 @@
     <div class="prompt-grid" id="prompt-grid"></div>
   </div>
   <footer class="site-footer">
-    Powered by <a href="https://669609ea814d1.site123.me" target="_blank" rel="noopener">EZ Navigation</a> &copy; 2023 All rights reserved
+    Powered by <a href="https://669609ea814d1.site123.me" target="_blank" rel="noopener">EZ Navigation</a> &copy; 2026 All rights reserved
   </footer>
 </main>
 
@@ -1154,6 +1160,19 @@ function closeMobileNavAndRun(fn) {
 document.getElementById("mobile-nav-overlay").addEventListener("click", function(e) {
   if (e.target === this) this.classList.remove("open");
 });
+
+function goHome() {
+  state.activeCategory = "all";
+  state.searchQuery = "";
+  document.getElementById("search-input").value = "";
+  document.getElementById("search-input-mobile").value = "";
+  document.getElementById("search-clear-btn").style.display = "none";
+  document.getElementById("page-title").textContent = "All Prompts";
+  document.getElementById("edit-cat-btn").style.display = "none";
+  renderCategories();
+  renderPrompts();
+  window.scrollTo(0, 0);
+}
 
 // ── Init ──────────────────────────────────────────────────────
 loadData();
