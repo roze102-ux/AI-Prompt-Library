@@ -139,7 +139,17 @@
     }
     .cat-item.active .cat-count { background: rgba(255,255,255,.25); color: #fff; }
 
-    .add-cat-btn {
+    .cat-edit-btn {
+      background: none; border: none;
+      color: rgba(255,255,255,.35);
+      font-size: 12px; cursor: pointer;
+      padding: 2px 4px; border-radius: 4px;
+      opacity: 0; transition: opacity .15s, color .15s;
+      flex-shrink: 0;
+    }
+    .cat-item:hover .cat-edit-btn { opacity: 1; }
+    .cat-item.active .cat-edit-btn { color: rgba(255,255,255,.6); opacity: 1; }
+    .cat-edit-btn:hover { color: #fff !important; }
       margin: 8px; padding: 9px 12px;
       background: rgba(255,255,255,.06);
       border: 1px dashed rgba(255,255,255,.2);
@@ -222,7 +232,85 @@
       background: #fafbfc;
     }
 
-    /* ── Buttons ──────────────────────────────────────────── */
+    /* ── Prompt Image Thumbnails ──────────────────────────── */
+    .prompt-thumbs {
+      display: flex; gap: 6px;
+      padding: 0 0 0 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .prompt-thumb {
+      flex: 1; height: 140px;
+      object-fit: cover;
+      cursor: zoom-in;
+      transition: opacity .15s, transform .15s;
+      display: block;
+    }
+    .prompt-thumbs .prompt-thumb:first-child:last-child {
+      /* single image — full width */
+      width: 100%;
+    }
+    .prompt-thumb:hover { opacity: .88; transform: scale(1.01); }
+
+    /* ── Image Upload in Modal ────────────────────────────── */
+    .img-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .15s;
+      background: #fafbfc;
+    }
+    .img-upload-area:hover { border-color: var(--accent); background: var(--accent-lt); }
+    .img-upload-area .upload-icon { font-size: 28px; margin-bottom: 6px; }
+    .img-upload-area .upload-text { font-size: 12px; color: var(--muted); }
+    .img-upload-area .upload-text strong { color: var(--accent); }
+
+    .img-previews-wrap {
+      display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+    }
+    .img-preview-item {
+      position: relative; flex: 1; min-width: 120px;
+    }
+    .img-preview-item img {
+      width: 100%; height: 100px; object-fit: cover;
+      border-radius: 8px; border: 1px solid var(--border);
+      display: block;
+    }
+    .img-preview-remove {
+      position: absolute; top: 4px; right: 4px;
+      background: rgba(0,0,0,.55); color: #fff;
+      border: none; border-radius: 50%;
+      width: 22px; height: 22px; font-size: 13px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .img-preview-remove:hover { background: var(--error); }
+    .img-slot-label {
+      font-size: 11px; color: var(--muted); text-align: center; margin-top: 4px;
+    }
+
+    /* ── Lightbox ─────────────────────────────────────────── */
+    .lightbox {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,.88);
+      align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 92vw; max-height: 90vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 48px rgba(0,0,0,.6);
+      object-fit: contain;
+      transition: transform .2s;
+    }
+    .lightbox-close {
+      position: fixed; top: 18px; right: 24px;
+      font-size: 32px; color: #fff; cursor: pointer;
+      background: none; border: none; line-height: 1;
+      opacity: .8; transition: opacity .15s;
+    }
+    .lightbox-close:hover { opacity: 1; }
     .btn {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 8px 14px;
@@ -532,8 +620,20 @@
         <select class="form-select" id="pm-category"></select>
       </div>
       <div class="form-group">
-        <label class="form-label">Prompt Text</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <label class="form-label" style="margin-bottom:0">Prompt Text</label>
+          <button class="btn btn-outline btn-sm" onclick="copyFromModal()" title="Copy prompt text" style="font-size:11px;padding:4px 10px">📋 Copy</button>
+        </div>
         <textarea class="form-textarea" id="pm-text" placeholder="Enter your full prompt here..." oninput="this.className='form-textarea'+(isHebrew(this.value)?' rtl':'')"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sample Images <span style="color:var(--muted);font-weight:400">(optional — max 2)</span></label>
+        <div class="img-upload-area" onclick="document.getElementById('pm-image-input').click()">
+          <input type="file" id="pm-image-input" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-text"><strong>Click to browse</strong> — PNG, JPG, WEBP<br><span id="img-slot-hint">Slot 1 of 2 available</span></div>
+        </div>
+        <div class="img-previews-wrap" id="pm-image-previews"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -746,7 +846,10 @@ function renderCategories() {
         : state.prompts.filter(function(p) { return p.categoryId === cat.id; }).length;
       var div = document.createElement("div");
       div.className = "cat-item" + (state.activeCategory === cat.id ? " active" : "");
-      div.innerHTML = "<div class=\"cat-left\"><span class=\"cat-emoji\">" + cat.emoji + "</span><span class=\"cat-name\">" + cat.name + "</span></div><span class=\"cat-count\">" + count + "</span>";
+      var editBtn = cat.id !== "all"
+        ? "<button class=\"cat-edit-btn\" onclick=\"event.stopPropagation();openEditCategoryById('" + cat.id + "')\" title=\"Edit category\">✏️</button>"
+        : "";
+      div.innerHTML = "<div class=\"cat-left\"><span class=\"cat-emoji\">" + cat.emoji + "</span><span class=\"cat-name\">" + cat.name + "</span></div><div style=\"display:flex;align-items:center;gap:4px\"><span class=\"cat-count\">" + count + "</span>" + editBtn + "</div>";
       div.onclick = function() {
         state.activeCategory = cat.id;
         document.getElementById("page-title").textContent = cat.id === "all" ? "All Prompts" : cat.emoji + " " + cat.name;
@@ -798,7 +901,20 @@ function renderPrompts() {
     card.className = "prompt-card";
     var catTag = cat ? cat.emoji + " " + cat.name : "";
     var previewClass = "prompt-preview" + (isHebrew(p.text) ? " rtl" : "");
+
+    // Image thumbnails (up to 2, side by side)
+    var images = p.images && p.images.length ? p.images : (p.image ? [p.image] : []);
+    var imgHtml = "";
+    if (images.length > 0) {
+      imgHtml = "<div class=\"prompt-thumbs\">";
+      images.forEach(function(src, idx) {
+        imgHtml += "<img class=\"prompt-thumb\" src=\"" + src + "\" alt=\"Image " + (idx+1) + "\" onclick=\"openLightbox('" + p.id + "'," + idx + ")\" title=\"Click to enlarge\">";
+      });
+      imgHtml += "</div>";
+    }
+
     card.innerHTML =
+      imgHtml +
       "<div class=\"prompt-card-header\">" +
         "<div class=\"prompt-title\">" + escHtml(p.title) + "</div>" +
         "<span class=\"prompt-category-tag\">" + catTag + "</span>" +
@@ -853,9 +969,11 @@ function editPrompt(id) {
   if (!p) return;
   state.editingPromptId = id;
   document.getElementById("prompt-modal-title").textContent = "Edit Prompt";
-  document.getElementById("pm-title").value    = p.title;
-  document.getElementById("pm-text").value     = p.text;
+  document.getElementById("pm-title").value = p.title;
+  document.getElementById("pm-text").value  = p.text;
   populateCategorySelect(p.categoryId);
+  currentImages = p.images ? p.images.slice() : (p.image ? [p.image] : []);
+  renderImagePreviews();
   openModal("prompt-modal");
 }
 
@@ -873,28 +991,36 @@ function openAddPrompt() {
   document.getElementById("prompt-modal-title").textContent = "Add Prompt";
   document.getElementById("pm-title").value = "";
   document.getElementById("pm-text").value  = "";
+  currentImages = [];
+  renderImagePreviews();
   populateCategorySelect(state.activeCategory === "all" ? state.categories[1]?.id : state.activeCategory);
   openModal("prompt-modal");
 }
 
 function savePrompt() {
-  const title    = document.getElementById("pm-title").value.trim();
-  const text     = document.getElementById("pm-text").value.trim();
-  const catId    = document.getElementById("pm-category").value;
+  const title = document.getElementById("pm-title").value.trim();
+  const text  = document.getElementById("pm-text").value.trim();
+  const catId = document.getElementById("pm-category").value;
 
   if (!title) { alert("Please enter a prompt title."); return; }
   if (!text)  { alert("Please enter the prompt text."); return; }
 
   if (state.editingPromptId) {
     const p = state.prompts.find(x => x.id === state.editingPromptId);
-    if (p) { p.title = title; p.text = text; p.categoryId = catId; }
+    if (p) {
+      p.title = title; p.text = text; p.categoryId = catId;
+      p.images = currentImages.length ? currentImages.slice() : (p.images || []);
+      delete p.image; // migrate old single-image field
+    }
   } else {
     state.prompts.push({
       id: "p" + Date.now(),
-      categoryId: catId, title, text
+      categoryId: catId, title, text,
+      images: currentImages.slice()
     });
   }
 
+  currentImages = [];
   saveData();
   closeModal("prompt-modal");
   renderCategories();
@@ -1116,6 +1242,18 @@ document.addEventListener("keydown", function(e) {
 });
 
 // ── Edit Category ─────────────────────────────────────────────
+function openEditCategoryById(id) {
+  var cat = null;
+  for (var i = 0; i < state.categories.length; i++) {
+    if (state.categories[i].id === id) { cat = state.categories[i]; break; }
+  }
+  if (!cat) return;
+  state.activeCategory = id; // set active so saveEditCategory works
+  document.getElementById("edit-cat-name-input").value  = cat.name;
+  document.getElementById("edit-cat-emoji-input").value = cat.emoji;
+  openModal("edit-cat-modal");
+}
+
 function openEditCategory() {
   if (state.activeCategory === "all") return;
   var cat = null;
@@ -1174,10 +1312,93 @@ function goHome() {
   window.scrollTo(0, 0);
 }
 
+function copyFromModal() {
+  var text = document.getElementById("pm-text").value.trim();
+  if (!text) { showToast("⚠️ No text to copy!"); return; }
+  navigator.clipboard.writeText(text).then(function() {
+    showToast("✅ Copied to clipboard!");
+  });
+}
+
+// ── Image Upload & Lightbox ───────────────────────────────────
+var currentImages = []; // array of up to 2 base64 strings
+
+function updateImageSlotHint() {
+  var remaining = 2 - currentImages.length;
+  var hint = document.getElementById("img-slot-hint");
+  var area = document.querySelector(".img-upload-area");
+  if (remaining <= 0) {
+    hint.textContent = "Maximum 2 images reached";
+    area.style.opacity = "0.5";
+    area.style.pointerEvents = "none";
+  } else {
+    hint.textContent = "Slot " + (currentImages.length + 1) + " of 2 available";
+    area.style.opacity = "1";
+    area.style.pointerEvents = "auto";
+  }
+}
+
+function renderImagePreviews() {
+  var wrap = document.getElementById("pm-image-previews");
+  wrap.innerHTML = "";
+  currentImages.forEach(function(img, idx) {
+    var item = document.createElement("div");
+    item.className = "img-preview-item";
+    item.innerHTML =
+      "<img src=\"" + img + "\" alt=\"Image " + (idx+1) + "\">" +
+      "<button class=\"img-preview-remove\" onclick=\"removeImage(" + idx + ")\" title=\"Remove\">✕</button>" +
+      "<div class=\"img-slot-label\">Image " + (idx+1) + "</div>";
+    wrap.appendChild(item);
+  });
+  updateImageSlotHint();
+}
+
+function handleImageUpload(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  if (currentImages.length >= 2) { alert("Maximum 2 images allowed."); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    currentImages.push(e.target.result);
+    renderImagePreviews();
+  };
+  reader.readAsDataURL(file);
+  event.target.value = "";
+}
+
+function removeImage(idx) {
+  currentImages.splice(idx, 1);
+  renderImagePreviews();
+}
+
+function openLightbox(promptId, imgIdx) {
+  var p = state.prompts.find(function(x) { return x.id === promptId; });
+  if (!p || !p.images || !p.images[imgIdx]) return;
+  document.getElementById("lightbox-img").src = p.images[imgIdx];
+  document.getElementById("lightbox").classList.add("open");
+}
+
+function closeLightbox(e) {
+  if (e) e.stopPropagation();
+  document.getElementById("lightbox").classList.remove("open");
+  document.getElementById("lightbox-img").src = "";
+}
+
+// Close lightbox with Escape key
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") closeLightbox();
+});
+
 // ── Init ──────────────────────────────────────────────────────
 loadData();
 renderCategories();
 renderPrompts();
 </script>
+<!-- ── Lightbox ─────────────────────────────────────────────── -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox(event)">✕</button>
+  <img id="lightbox-img" src="" alt="Full size image">
+</div>
+
 </body>
 </html>
