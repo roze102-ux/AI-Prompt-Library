@@ -827,11 +827,31 @@ function loadData() {
   const prompts = localStorage.getItem("pl_prompts");
   state.categories = cats    ? JSON.parse(cats)    : [...DEFAULT_CATEGORIES];
   state.prompts    = prompts ? JSON.parse(prompts) : [...DEFAULT_PROMPTS];
+  // Restore images from sessionStorage
+  state.prompts.forEach(p => {
+    try {
+      const imgs = sessionStorage.getItem("pl_img_" + p.id);
+      if (imgs) p.images = JSON.parse(imgs);
+    } catch(e) {}
+  });
 }
 
 function saveData() {
-  localStorage.setItem("pl_categories", JSON.stringify(state.categories));
-  localStorage.setItem("pl_prompts",    JSON.stringify(state.prompts));
+  try {
+    localStorage.setItem("pl_categories", JSON.stringify(state.categories));
+    localStorage.setItem("pl_prompts",    JSON.stringify(state.prompts));
+  } catch(e) {
+    // localStorage quota exceeded — images too large
+    // Save without images as fallback
+    try {
+      const promptsNoImages = state.prompts.map(p => ({...p, images: [], image: null}));
+      localStorage.setItem("pl_categories", JSON.stringify(state.categories));
+      localStorage.setItem("pl_prompts",    JSON.stringify(promptsNoImages));
+      showToast("⚠️ Images too large for browser storage — use Export to save!", 4000);
+    } catch(e2) {
+      console.warn("Storage full:", e2);
+    }
+  }
 }
 
 // ── Render ────────────────────────────────────────────────────
@@ -1005,19 +1025,28 @@ function savePrompt() {
   if (!title) { alert("Please enter a prompt title."); return; }
   if (!text)  { alert("Please enter the prompt text."); return; }
 
+  // Store images separately in sessionStorage to avoid localStorage quota
+  const imageKey = "pl_images_" + (state.editingPromptId || "p" + Date.now());
+
   if (state.editingPromptId) {
     const p = state.prompts.find(x => x.id === state.editingPromptId);
     if (p) {
       p.title = title; p.text = text; p.categoryId = catId;
-      p.images = currentImages.length ? currentImages.slice() : (p.images || []);
-      delete p.image; // migrate old single-image field
+      if (currentImages.length) {
+        p.images = currentImages.slice();
+        try { sessionStorage.setItem("pl_img_" + p.id, JSON.stringify(currentImages)); } catch(e) {}
+      }
+      delete p.image;
     }
   } else {
-    state.prompts.push({
-      id: "p" + Date.now(),
+    const newId = "p" + Date.now();
+    const newPrompt = {
+      id: newId,
       categoryId: catId, title, text,
       images: currentImages.slice()
-    });
+    };
+    try { if (currentImages.length) sessionStorage.setItem("pl_img_" + newId, JSON.stringify(currentImages)); } catch(e) {}
+    state.prompts.push(newPrompt);
   }
 
   currentImages = [];
