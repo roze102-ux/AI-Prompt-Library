@@ -1025,36 +1025,35 @@ function savePrompt() {
   if (!title) { alert("Please enter a prompt title."); return; }
   if (!text)  { alert("Please enter the prompt text."); return; }
 
-  // Store images separately in sessionStorage to avoid localStorage quota
-  const imageKey = "pl_images_" + (state.editingPromptId || "p" + Date.now());
+  const isEditing = !!state.editingPromptId;
 
-  if (state.editingPromptId) {
-    const p = state.prompts.find(x => x.id === state.editingPromptId);
-    if (p) {
-      p.title = title; p.text = text; p.categoryId = catId;
-      if (currentImages.length) {
-        p.images = currentImages.slice();
-        try { sessionStorage.setItem("pl_img_" + p.id, JSON.stringify(currentImages)); } catch(e) {}
+  try {
+    if (isEditing) {
+      const p = state.prompts.find(x => x.id === state.editingPromptId);
+      if (p) {
+        p.title = title; p.text = text; p.categoryId = catId;
+        if (currentImages.length) p.images = currentImages.slice();
+        delete p.image;
+        try { sessionStorage.setItem("pl_img_" + p.id, JSON.stringify(p.images || [])); } catch(e) {}
       }
-      delete p.image;
+    } else {
+      const newId = "p" + Date.now();
+      const newPrompt = { id: newId, categoryId: catId, title, text, images: currentImages.slice() };
+      try { sessionStorage.setItem("pl_img_" + newId, JSON.stringify(newPrompt.images)); } catch(e) {}
+      state.prompts.push(newPrompt);
     }
-  } else {
-    const newId = "p" + Date.now();
-    const newPrompt = {
-      id: newId,
-      categoryId: catId, title, text,
-      images: currentImages.slice()
-    };
-    try { if (currentImages.length) sessionStorage.setItem("pl_img_" + newId, JSON.stringify(currentImages)); } catch(e) {}
-    state.prompts.push(newPrompt);
+    saveData();
+  } catch(err) {
+    console.warn("Save error:", err);
   }
 
+  // Always close and refresh regardless of errors
   currentImages = [];
-  saveData();
+  state.editingPromptId = null;
   closeModal("prompt-modal");
   renderCategories();
   renderPrompts();
-  showToast(state.editingPromptId ? "✅ Prompt updated!" : "✅ Prompt added!");
+  showToast(isEditing ? "✅ Prompt updated!" : "✅ Prompt added!");
 }
 
 function openAddCategory() {
