@@ -760,8 +760,8 @@ const DEFAULT_CATEGORIES = [
   { id: "chatbot", name: "Chatbot Personas",   emoji: "🤖" },
   { id: "tasks",   name: "Simple Tasks",       emoji: "🧮" },
   { id: "docs",    name: "Document Processing",emoji: "📄" },
-  { id: "email",   name: "Email Writing",      emoji: "\u2709\ufe0f"  },
-  { id: "cat_1782358037841", name: "Hp", emoji: "\ud83d\udcc1" },
+  { id: "email",   name: "Email Writing",      emoji: "✉️"  },
+  { id: "cat_1782358037841", name: "Hp", emoji: "📁" },
 ];
 
 const DEFAULT_PROMPTS = [
@@ -807,7 +807,7 @@ const DEFAULT_PROMPTS = [
   },
   {
     id: "p1782358107404", categoryId: "cat_1782358037841", title: "Hp printer",
-    text: "\u05d0\u05ea\u05d4 \u05d8\u05db\u05e0\u05d0\u05d9 \u05de\u05d7\u05e9\u05d1\u05d9\u05dd \u05d1\u05d7\u05e1\u05d3. \u05d0\u05ea\u05d4 \u05e2\u05d5\u05d6\u05e8 \u05dc\u05d0\u05e0\u05e9\u05d9\u05dd \u05d1\u05d1\u05e2\u05d9\u05d5\u05ea \u05d8\u05db\u05e0\u05d9\u05d5\u05ea \u05d1\u05d5\u05e7\u05e8 \u05d8\u05d5\u05d1 \u05d4\u05de\u05d3\u05e4\u05e1\u05ea \u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3\u05ea \u05e0\u05d0 \u05dc\u05e1\u05d3\u05e8 \u05d0\u05ea \u05d4\u05de\u05d3\u05e4\u05e1\u05ea."
+    text: "אתה טכנאי מחשבים בחסד. אתה עוזר לאנשים בבעיות טכניות בוקר טוב המדפסת לא עובדת נא לסדר את המדפסת."
   },
 ];
 
@@ -903,7 +903,7 @@ function renderPrompts() {
 
   if (!prompts.length) {
     grid.innerHTML = "<div class=\"empty-state\" style=\"grid-column:1/-1\">" +
-      "<div class=\"empty-icon\">" + (search ? "\ud83d\udd0d" : "\ud83d\udcdd") + "</div>" +
+      "<div class=\"empty-icon\">" + (search ? "🔍" : "📝") + "</div>" +
       "<h3>" + (search ? "No prompts match your search" : "No prompts here yet") + "</h3>" +
       "<p>" + (search ? "Try different keywords" : "Click '+ Add Prompt' to create your first one") + "</p>" +
       (!search ? "<button class=\"btn btn-primary\" onclick=\"openAddPrompt()\">+ Add Prompt</button>" : "") +
@@ -957,7 +957,7 @@ function escHtml(str) {
 
 // ── Hebrew Detection ──────────────────────────────────────────
 function isHebrew(text) {
-  return /[\u0590-\u05FF]/.test(text);
+  return /[֐-׿]/.test(text);
 }
 
 // ── Actions ───────────────────────────────────────────────────
@@ -1000,6 +1000,7 @@ function editPrompt(id) {
 function deletePrompt(id) {
   if (!confirm("Delete this prompt? This cannot be undone.")) return;
   state.prompts = state.prompts.filter(p => p.id !== id);
+  try { sessionStorage.removeItem("pl_img_" + id); } catch(e) {}
   saveData();
   renderCategories();
   renderPrompts();
@@ -1032,7 +1033,7 @@ function savePrompt() {
       const p = state.prompts.find(x => x.id === state.editingPromptId);
       if (p) {
         p.title = title; p.text = text; p.categoryId = catId;
-        if (currentImages.length) p.images = currentImages.slice();
+        p.images = currentImages.slice();
         delete p.image;
         try { sessionStorage.setItem("pl_img_" + p.id, JSON.stringify(p.images || [])); } catch(e) {}
       }
@@ -1094,6 +1095,7 @@ function confirmRemovePrompt() {
   if (!id) return;
   if (!confirm("Remove this prompt? This cannot be undone.")) return;
   state.prompts = state.prompts.filter(p => p.id !== id);
+  try { sessionStorage.removeItem("pl_img_" + id); } catch(e) {}
   saveData();
   closeModal("remove-prompt-modal");
   renderCategories();
@@ -1122,8 +1124,10 @@ function confirmRemoveCategory() {
   const cat = state.categories.find(c => c.id === id);
   const count = state.prompts.filter(p => p.categoryId === id).length;
   if (!confirm("Remove \"${cat.name}\" and all ${count} prompt(s) in it? This cannot be undone.")) return;
+  const removedIds = state.prompts.filter(p => p.categoryId === id).map(p => p.id);
   state.categories = state.categories.filter(c => c.id !== id);
   state.prompts    = state.prompts.filter(p => p.categoryId !== id);
+  removedIds.forEach(pid => { try { sessionStorage.removeItem("pl_img_" + pid); } catch(e) {} });
   if (state.activeCategory === id) state.activeCategory = "all";
   saveData();
   closeModal("remove-cat-modal");
